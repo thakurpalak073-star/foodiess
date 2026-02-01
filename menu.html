@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menu - Foodie</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="../index.html" class="logo">Foodie</a>
+            <div class="search-bar">
+                <input type="text" id="menu-search" placeholder="Search for food...">
+            </div>
+            <div class="nav-actions">
+                <button onclick="toggleTheme()" class="btn"><i class="fas fa-moon"></i></button>
+                <a href="cart.html" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="menu-layout">
+            <aside class="filters-sidebar">
+                <div class="filter-group">
+                    <h4>Categories</h4>
+                    <div id="category-filters">
+                        <!-- Dynamic categories -->
+                    </div>
+                </div>
+
+                <div class="filter-group">
+                    <h4>Type</h4>
+                    <label class="filter-option">
+                        <input type="checkbox" name="type" value="veg" onchange="filterItems()"> Veg
+                    </label>
+                    <label class="filter-option">
+                        <input type="checkbox" name="type" value="nonveg" onchange="filterItems()"> Non-Veg
+                    </label>
+                </div>
+
+                <div class="filter-group">
+                    <h4>Price Range</h4>
+                    <select id="price-filter" class="btn" style="width: 100%; border: 1px solid var(--border-color);" onchange="filterItems()">
+                        <option value="all">All Prices</option>
+                        <option value="under200">Under ₹200</option>
+                        <option value="200-500">₹200 - ₹500</option>
+                        <option value="over500">Over ₹500</option>
+                    </select>
+                </div>
+            </aside>
+
+            <section>
+                <h2 id="menu-title">All Food Items</h2>
+                <div class="items-grid" id="menu-container" style="margin-top: 20px;">
+                    <!-- Items will be rendered here -->
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="../assets/js/data.js"></script>
+    <script src="../assets/js/storage.js"></script>
+    <script src="../assets/js/main.js"></script>
+    <script>
+        let allItems = Storage.getFoodItems();
+        let filteredItems = [...allItems];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCategoryFilters();
+            
+            // Handle URL params
+            const params = new URLSearchParams(window.location.search);
+            const cat = params.get('category');
+            const search = params.get('search');
+            
+            if (cat) {
+                document.getElementById('menu-title').textContent = `${cat} Items`;
+                // Check the category in filters if implemented as checkboxes
+            }
+            if (search) {
+                document.getElementById('menu-search').value = search;
+            }
+
+            filterItems();
+        });
+
+        function renderCategoryFilters() {
+            const container = document.getElementById('category-filters');
+            container.innerHTML = categories.map(cat => `
+                <label class="filter-option">
+                    <input type="checkbox" name="category" value="${cat.name}" onchange="filterItems()"> ${cat.name}
+                </label>
+            `).join('');
+        }
+
+        function filterItems() {
+            const searchQuery = document.getElementById('menu-search').value.toLowerCase();
+            const selectedCategories = Array.from(document.querySelectorAll('input[name="category"]:checked')).map(cb => cb.value);
+            const selectedTypes = Array.from(document.querySelectorAll('input[name="type"]:checked')).map(cb => cb.value);
+            const priceRange = document.getElementById('price-filter').value;
+
+            filteredItems = allItems.filter(item => {
+                const matchesSearch = item.name.toLowerCase().includes(searchQuery);
+                const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(item.category);
+                
+                let matchesType = true;
+                if (selectedTypes.length === 1) {
+                    matchesType = selectedTypes[0] === 'veg' ? item.isVeg : !item.isVeg;
+                }
+
+                let matchesPrice = true;
+                if (priceRange === 'under200') matchesPrice = item.price < 200;
+                else if (priceRange === '200-500') matchesPrice = item.price >= 200 && item.price <= 500;
+                else if (priceRange === 'over500') matchesPrice = item.price > 500;
+
+                return matchesSearch && matchesCategory && matchesType && matchesPrice;
+            });
+
+            renderMenu();
+        }
+
+        function renderMenu() {
+            const container = document.getElementById('menu-container');
+            if (filteredItems.length === 0) {
+                container.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 50px;">No items found matching your filters.</p>';
+                return;
+            }
+
+            container.innerHTML = filteredItems.map(food => `
+                <div class="card">
+                    <img src="${food.image}" class="card-img" alt="${food.name}">
+                    <div class="card-content">
+                        <span class="${food.isVeg ? 'veg-label' : 'non-veg-label'}">
+                            ${food.isVeg ? 'Veg' : 'Non-Veg'}
+                        </span>
+                        <div class="card-title">${food.name}</div>
+                        <div class="price-row">
+                            <span class="price">₹${food.price}</span>
+                            <button class="btn btn-primary" onclick="addToCart(${food.id})">Add</button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function addToCart(id) {
+            const food = allItems.find(f => f.id === id);
+            Storage.addToCart(food);
+            showToast('Item added to cart!');
+        }
+
+        // Real-time search
+        document.getElementById('menu-search').addEventListener('input', filterItems);
+    </script>
+</body>
+</html>

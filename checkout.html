@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout - Foodie</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../assets/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <a href="../index.html" class="logo">Foodie</a>
+            <div class="nav-actions">
+                <button onclick="toggleTheme()" class="btn"><i class="fas fa-moon"></i></button>
+                <a href="cart.html" class="cart-icon">
+                    <i class="fas fa-shopping-cart"></i>
+                    <span class="cart-badge cart-count">0</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h2 style="margin-top: 30px;">Checkout</h2>
+        
+        <div class="cart-layout">
+            <div class="cart-items">
+                <h3>Delivery Details</h3>
+                <form id="checkout-form" style="margin-top: 20px;">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="name" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label>Phone Number</label>
+                        <input type="tel" id="phone" required placeholder="+91 9876543210">
+                    </div>
+                    <div class="form-group">
+                        <label>Delivery Address</label>
+                        <textarea id="address" rows="3" required placeholder="H.No, Street, City, Pincode"></textarea>
+                    </div>
+
+                    <h3 style="margin-top: 30px;">Payment Method</h3>
+                    <div class="payment-options">
+                        <div class="payment-option active" onclick="selectPayment(this, 'COD')">
+                            <i class="fas fa-money-bill-wave"></i>
+                            <p>Cash on Delivery</p>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment(this, 'UPI')">
+                            <i class="fas fa-mobile-alt"></i>
+                            <p>UPI</p>
+                        </div>
+                        <div class="payment-option" onclick="selectPayment(this, 'Card')">
+                            <i class="fas fa-credit-card"></i>
+                            <p>Card</p>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <div class="cart-summary" id="checkout-summary">
+                <!-- Summary will be rendered here -->
+            </div>
+        </div>
+    </main>
+
+    <script src="../assets/js/storage.js"></script>
+    <script src="../assets/js/main.js"></script>
+    <script>
+        let selectedPaymentMethod = 'COD';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            renderSummary();
+        });
+
+        function renderSummary() {
+            const cart = Storage.getCart();
+            if (cart.length === 0) {
+                window.location.href = 'cart.html';
+                return;
+            }
+
+            let subtotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+            const tax = Math.round(subtotal * 0.05);
+            const delivery = 40;
+            const total = subtotal + tax + delivery;
+
+            document.getElementById('checkout-summary').innerHTML = `
+                <h3>Order Summary</h3>
+                <div class="summary-row" style="margin-top: 20px;">
+                    <span>Items Total</span>
+                    <span>₹${subtotal}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax & Fees</span>
+                    <span>₹${tax}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery Fee</span>
+                    <span>₹${delivery}</span>
+                </div>
+                <div class="summary-row summary-total">
+                    <span>To Pay</span>
+                    <span>₹${total}</span>
+                </div>
+                <button class="btn btn-primary" style="width: 100%; margin-top: 20px;" onclick="placeOrder()">
+                    Place Order
+                </button>
+            `;
+        }
+
+        function selectPayment(el, method) {
+            document.querySelectorAll('.payment-option').forEach(opt => opt.classList.remove('active'));
+            el.classList.add('active');
+            selectedPaymentMethod = method;
+        }
+
+        function placeOrder() {
+            const form = document.getElementById('checkout-form');
+            if (!form.checkValidity()) {
+                form.reportValidity();
+                return;
+            }
+
+            const orderData = {
+                customer: {
+                    name: document.getElementById('name').value,
+                    phone: document.getElementById('phone').value,
+                    address: document.getElementById('address').value
+                },
+                items: Storage.getCart(),
+                paymentMethod: selectedPaymentMethod,
+                total: Storage.getCart().reduce((acc, item) => acc + (item.price * item.quantity), 0) + 40 + Math.round(Storage.getCart().reduce((acc, item) => acc + (item.price * item.quantity), 0) * 0.05)
+            };
+
+            const orderId = Storage.placeOrder(orderData);
+            window.location.href = `confirmation.html?orderId=${orderId}`;
+        }
+    </script>
+</body>
+</html>
